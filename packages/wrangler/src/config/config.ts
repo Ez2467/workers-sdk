@@ -382,6 +382,7 @@ export const defaultWranglerConfig: Config = {
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},
 	cloudchamber: {},
+	containers: { app: [] },
 	send_email: [],
 	browser: undefined,
 	unsafe: {
