@@ -173,7 +173,7 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-export const validateRoutes = (routes: Route[], assetsDir?: string) => {
+export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 	const invalidRoutes: Record<string, string[]> = {};
 	const mountedAssetRoutes: string[] = [];
 
@@ -191,19 +191,16 @@ export const validateRoutes = (routes: Route[], assetsDir?: string) => {
 					`Paths are not allowed in Custom Domains`
 				);
 			}
-		} else if (assetsDir !== undefined) {
+			// If we have Assets but we're not always hitting the Worker then validate
+		} else if (
+			assets?.directory !== undefined &&
+			assets.assetConfig.serve_directly !== true
+		) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");
 
-			// If the route does not end with a wildcard, then error
-			// We may want to allow this in the future, but for now let's error
-			if (components[components.length - 1] !== "*") {
-				invalidRoutes[pattern] ??= [];
-				invalidRoutes[pattern].push(
-					`Workers which have static assets must end with a wildcard path. Update the route to end with /*`
-				);
-				// ie it doesn't match exactly "route.com/*" = [route.com, *]
-			} else if (!(components.length === 2 && components[1] === "*")) {
+			// If this isn't `domain.com/*` then we're mounting to a path
+			if (!(components.length === 2 && components[1] === "*")) {
 				mountedAssetRoutes.push(pattern);
 			}
 		}
@@ -217,8 +214,8 @@ export const validateRoutes = (routes: Route[], assetsDir?: string) => {
 		);
 	}
 
-	if (mountedAssetRoutes.length > 0 && assetsDir !== undefined) {
-		const relativeAssetsDir = path.relative(process.cwd(), assetsDir);
+	if (mountedAssetRoutes.length > 0 && assets?.directory !== undefined) {
+		const relativeAssetsDir = path.relative(process.cwd(), assets.directory);
 
 		logger.once.warn(
 			`Warning: The following routes will attempt to serve Assets on a mounted path:\n${mountedAssetRoutes
@@ -231,7 +228,9 @@ export const validateRoutes = (routes: Route[], assetsDir?: string) => {
 					return `  • ${route} (Will match assets: ${assetPath})`;
 				})
 				.join("\n")}` +
-				"\n\nRequests not matching an asset will be forwarded to the Worker."
+				(assets?.routingConfig.has_user_worker
+					? "\n\nRequests not matching an asset will be forwarded to the Worker script."
+					: "")
 		);
 	}
 };
@@ -448,7 +447,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	validateRoutes(routes, props.assetsOptions?.directory);
+	validateRoutes(routes, props.assetsOptions);
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;

@@ -2,5 +2,6 @@
 "wrangler": minor
 ---
 
-feat: allow mounting Workers Assets on wildcard paths not just the root - e.g. `example.com/blog/*` can now serve assets.
-These assets will be served matching the assets dir, so `example.com/blog/*` will serve assets from the `blog` dir within your assets output folder.
+feat: allow routing to Workers with Assets on any HTTP route, not just the root. For example, `example.com/blog/*` can now be used to serve assets.
+These assets will be served as though the assets directly were mounted to the root.
+For example, if you have `asset.directory = "./public/"` then `./public/blog/logo.png` will be available at `example.com/blog/logo.png`. Assets outside of directories which match the configured HTTP routes can still be accessed with the [Assets binding](https://developers.cloudflare.com/workers/static-assets/binding/#binding) or with a [Service binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/) to this Worker.
