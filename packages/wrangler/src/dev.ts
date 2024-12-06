@@ -899,7 +899,7 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		validateRoutes(routes, Boolean(args.assets || config.assets));
+		validateRoutes(routes, args.assets ?? config?.assets?.directory);
 	}
 	return { host, routes };
 }

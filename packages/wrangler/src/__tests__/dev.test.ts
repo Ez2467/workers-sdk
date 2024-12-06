@@ -374,6 +374,7 @@ describe.sequential("wrangler dev", () => {
 				],
 			});
 		});
+
 		it("should error if custom domains with paths are passed in but allow paths on normal routes", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			writeWranglerConfig({
@@ -401,6 +402,7 @@ describe.sequential("wrangler dev", () => {
 				Paths are not allowed in Custom Domains]
 			`);
 		});
+
 		it("should error on routes with paths if assets are present", async () => {
 			writeWranglerConfig({
 				routes: [
@@ -427,10 +429,7 @@ describe.sequential("wrangler dev", () => {
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid Routes:
 				simple.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
-
-				simple.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
 
 				simple.co.uk/:
 				Workers which have static assets must end with a wildcard path. Update the route to end with /*
@@ -439,10 +438,7 @@ describe.sequential("wrangler dev", () => {
 				Workers which have static assets must end with a wildcard path. Update the route to end with /*
 
 				route.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
-
-				route.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
 
 				route.co.uk/:
 				Workers which have static assets must end with a wildcard path. Update the route to end with /*
@@ -456,6 +452,34 @@ describe.sequential("wrangler dev", () => {
 				custom.co.uk/*:
 				Wildcard operators (*) are not allowed in Custom Domains
 				Paths are not allowed in Custom Domains]
+			`);
+		});
+
+		it("should warn on mounted paths in dev", async () => {
+			writeWranglerConfig({
+				routes: [
+					"simple.co.uk/path/*",
+					"simple.co.uk/*",
+					{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
+				],
+			});
+
+			fs.mkdirSync("assets");
+
+			await runWranglerUntilConfig("dev --assets assets");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWarning: The following routes will attempt to serve Assets on a mounted path:[0m
+
+				    • simple.co.uk/path/* (Will match assets: assets/path/*)
+				    • example.com/blog/* (Will match assets: assets/blog/*)
+				    • example.com/abc/def/* (Will match assets: assets/abc/def/*)
+
+				  Requests not matching an asset will be forwarded to the Worker.
+
+				"
 			`);
 		});
 	});

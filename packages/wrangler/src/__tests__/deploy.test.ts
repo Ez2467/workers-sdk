@@ -1625,10 +1625,7 @@ Update them to point to this script instead?`,
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid Routes:
 				simple.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
-
-				simple.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
 
 				simple.co.uk/:
 				Workers which have static assets must end with a wildcard path. Update the route to end with /*
@@ -1637,10 +1634,7 @@ Update them to point to this script instead?`,
 				Workers which have static assets must end with a wildcard path. Update the route to end with /*
 
 				route.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
-
-				route.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
 
 				route.co.uk/:
 				Workers which have static assets must end with a wildcard path. Update the route to end with /*
@@ -1686,6 +1680,81 @@ Update them to point to this script instead?`,
 				custom.co.uk/*:
 				Wildcard operators (*) are not allowed in Custom Domains
 				Paths are not allowed in Custom Domains]
+			`);
+		});
+
+		it("should warn on mounted paths", async () => {
+			writeWranglerConfig({
+				routes: [
+					"simple.co.uk/path/*",
+					"simple.co.uk/*",
+					{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
+				],
+			});
+			await mockAUSRequest([]);
+			mockSubDomainRequest();
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			mockPublishRoutesRequest({
+				routes: [
+					// @ts-expect-error - this is what is expected
+					{
+						pattern: "simple.co.uk/path/*",
+					},
+					// @ts-expect-error - this is what is expected
+					{
+						pattern: "simple.co.uk/*",
+					},
+					{
+						pattern: "example.com/blog/*",
+						zone_id: "asdfadsf",
+					},
+					{
+						pattern: "example.com/*",
+						zone_id: "asdfadsf",
+					},
+					{
+						pattern: "example.com/abc/def/*",
+						zone_id: "asdfadsf",
+					},
+				],
+			});
+
+			writeWorkerSource();
+			writeAssets([{ filePath: "asset.txt", content: "Content of file-1" }]);
+
+			await runWrangler(`deploy --assets assets`);
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWarning: The following routes will attempt to serve Assets on a mounted path:[0m
+
+				    • simple.co.uk/path/* (Will match assets: assets/path/*)
+				    • example.com/blog/* (Will match assets: assets/blog/*)
+				    • example.com/abc/def/* (Will match assets: assets/abc/def/*)
+
+				  Requests not matching an asset will be forwarded to the Worker.
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  simple.co.uk/path/*
+				  simple.co.uk/*
+				  example.com/blog/* (zone id: asdfadsf)
+				  example.com/* (zone id: asdfadsf)
+				  example.com/abc/def/* (zone id: asdfadsf)
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
