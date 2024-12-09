@@ -1,5 +1,15 @@
 # wrangler
 
+## 3.93.1
+
+### Patch Changes
+
+- [#7002](https://github.com/cloudflare/workers-sdk/pull/7002) [`d2447c6`](https://github.com/cloudflare/workers-sdk/commit/d2447c6c1ebcdebf0829519c3bc52bc2d30a4294) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: More helpful error messages when validating compatibility date
+
+- Updated dependencies [[`5449fe5`](https://github.com/cloudflare/workers-sdk/commit/5449fe54b15cf7c6dd12c385b0c8d2883c641b80)]:
+  - @cloudflare/workers-shared@0.11.0
+  - miniflare@3.20241205.0
+
 ## 3.93.0
 
 ### Minor Changes
